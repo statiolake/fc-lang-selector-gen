@@ -1,0 +1,6 @@
+[package]
+name = "fc_lang_selector_gen"
+version = "0.1.0"
+authors = ["statiolake <statiolake@gmail.com>"]
+
+[dependencies]
