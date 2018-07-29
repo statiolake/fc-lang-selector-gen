@@ -1,14 +1,14 @@
 #![feature(conservative_impl_trait, dyn_trait, box_syntax)]
 
-use std::error::Error;
 use std::env;
+use std::error::Error;
 
-use std::path::PathBuf;
 use std::fs::File;
+use std::path::PathBuf;
 
-use std::process;
-use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
+use std::io::{BufReader, BufWriter};
+use std::process;
 
 fn get_alias_dir() -> PathBuf {
     env::current_exe()
@@ -34,7 +34,8 @@ impl ReadFontNameError {
     pub fn new(path: PathBuf, error: Box<dyn Error>) -> ReadFontNameError {
         ReadFontNameError {
             description: format!("error while reading {}", path.display()),
-            path, error
+            path,
+            error,
         }
     }
 }
@@ -49,7 +50,11 @@ impl Error for ReadFontNameError {
     }
 }
 
-fn read_font_name<'a, 'b>(mut alias_dir: PathBuf, kind: &'a str, alias: &'b str) -> Result<String, ReadFontNameError> {
+fn read_font_name<'a, 'b>(
+    mut alias_dir: PathBuf,
+    kind: &'a str,
+    alias: &'b str,
+) -> Result<String, ReadFontNameError> {
     alias_dir.push(kind);
     alias_dir.push(alias);
 
@@ -57,17 +62,20 @@ fn read_font_name<'a, 'b>(mut alias_dir: PathBuf, kind: &'a str, alias: &'b str)
     let f = File::open(&alias_dir).map_err(|e| ReadFontNameError::new(alias_dir.clone(), box e))?;
     let mut br = BufReader::new(f);
     let mut contents = String::new();
-    br.read_to_string(&mut contents).map_err(|e| ReadFontNameError::new(alias_dir.clone(), box e))?;
+    br.read_to_string(&mut contents)
+        .map_err(|e| ReadFontNameError::new(alias_dir.clone(), box e))?;
 
     Ok(contents.trim().to_string())
 }
 
 fn generate_xml<Sans, Serif, Monospace>(sans: Sans, serif: Serif, monospace: Monospace) -> String
-where Sans: AsRef<str>,
-      Serif: AsRef<str>,
-      Monospace: AsRef<str>,
+where
+    Sans: AsRef<str>,
+    Serif: AsRef<str>,
+    Monospace: AsRef<str>,
 {
-    format!(r#"<?xml version="1.0"?>
+    format!(
+        r#"<?xml version="1.0"?>
 <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
 <fontconfig>
     <match target="pattern">
@@ -95,12 +103,21 @@ where Sans: AsRef<str>,
         </edit>
     </match>
 </fontconfig>
-"#, serif.as_ref(), sans.as_ref(), monospace.as_ref())
+"#,
+        serif.as_ref(),
+        sans.as_ref(),
+        monospace.as_ref()
+    )
 }
 
 fn write_to_language_selector(xml: String) -> Result<(), Box<dyn Error>> {
-    let path: PathBuf = ["/", "etc", "fonts", "conf.d", "69-language-selector-ja-jp.conf"]
-        .into_iter()
+    let path: PathBuf = [
+        "/",
+        "etc",
+        "fonts",
+        "conf.d",
+        "69-language-selector-ja-jp.conf",
+    ].into_iter()
         .collect();
     // println!("writing at {}", path.display());
 
@@ -116,30 +133,43 @@ fn main() {
     if args.len() != 4 {
         eprintln!(
             "[EE] The number of arguments is incollect: expected {} but {} supplied.",
-            4, args.len());
+            4,
+            args.len()
+        );
         process::exit(1);
     }
     let alias_dir = get_alias_dir();
 
     macro_rules! unwrap_font_name {
-        ($kind:expr, $res:expr) => (
+        ($kind:expr, $res:expr) => {
             match $res {
                 Ok(name) => {
                     println!("{:>10} font: {}", $kind, name);
                     name
-                },
+                }
                 Err(e) => {
-                    eprintln!("[EE] encounted error while reading {} font: {}", $kind, e.description());
+                    eprintln!(
+                        "[EE] encounted error while reading {} font: {}",
+                        $kind,
+                        e.description()
+                    );
                     eprintln!("[EE] ... which was caused by {:?}.", e.cause().unwrap());
                     process::exit(1);
                 }
             }
-        )
+        };
     }
 
-    let sans_font_name = unwrap_font_name!("sans", read_font_name(alias_dir.clone(), "sans", &args[1]));
-    let serif_font_name = unwrap_font_name!("serif", read_font_name(alias_dir.clone(), "serif", &args[2]));
-    let mono_font_name = unwrap_font_name!("monospace", read_font_name(alias_dir.clone(), "monospace", &args[3]));
+    let sans_font_name =
+        unwrap_font_name!("sans", read_font_name(alias_dir.clone(), "sans", &args[1]));
+    let serif_font_name = unwrap_font_name!(
+        "serif",
+        read_font_name(alias_dir.clone(), "serif", &args[2])
+    );
+    let mono_font_name = unwrap_font_name!(
+        "monospace",
+        read_font_name(alias_dir.clone(), "monospace", &args[3])
+    );
 
     let xml = generate_xml(sans_font_name, serif_font_name, mono_font_name);
     if let Err(e) = write_to_language_selector(xml) {
