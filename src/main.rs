@@ -116,7 +116,7 @@ fn write_to_language_selector(xml: String) -> Result<(), Box<dyn Error>> {
         "etc",
         "fonts",
         "conf.d",
-        "30-language-selector-ja-jp.conf",
+        "69-language-selector-ja-jp.conf",
     ].into_iter()
         .collect();
     // println!("writing at {}", path.display());
