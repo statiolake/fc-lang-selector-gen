@@ -1,5 +1,3 @@
-#![feature(box_syntax)]
-
 use std::env;
 use std::error::Error;
 
@@ -50,20 +48,21 @@ impl Error for ReadFontNameError {
     }
 }
 
-fn read_font_name<'a, 'b>(
+fn read_font_name(
     mut alias_dir: PathBuf,
-    kind: &'a str,
-    alias: &'b str,
+    kind: &str,
+    alias: &str,
 ) -> Result<String, ReadFontNameError> {
     alias_dir.push(kind);
     alias_dir.push(alias);
 
     // println!("[reading {}", alias_dir.display());
-    let f = File::open(&alias_dir).map_err(|e| ReadFontNameError::new(alias_dir.clone(), box e))?;
+    let f = File::open(&alias_dir)
+        .map_err(|e| ReadFontNameError::new(alias_dir.clone(), Box::new(e)))?;
     let mut br = BufReader::new(f);
     let mut contents = String::new();
     br.read_to_string(&mut contents)
-        .map_err(|e| ReadFontNameError::new(alias_dir.clone(), box e))?;
+        .map_err(|e| ReadFontNameError::new(alias_dir.clone(), Box::new(e)))?;
 
     Ok(contents.trim().to_string())
 }
@@ -117,8 +116,9 @@ fn write_to_language_selector(xml: String) -> Result<(), Box<dyn Error>> {
         "fonts",
         "conf.d",
         "69-language-selector-ja-jp.conf",
-    ].into_iter()
-        .collect();
+    ]
+    .iter()
+    .collect();
     // println!("writing at {}", path.display());
 
     let f = File::create(path)?;
@@ -132,8 +132,7 @@ fn main() {
     let args: Vec<_> = env::args().collect();
     if args.len() != 4 {
         eprintln!(
-            "[EE] The number of arguments is incollect: expected {} but {} supplied.",
-            4,
+            "[EE] The number of arguments is incollect: expected 4 but {} supplied.",
             args.len()
         );
         process::exit(1);
@@ -148,12 +147,8 @@ fn main() {
                     name
                 }
                 Err(e) => {
-                    eprintln!(
-                        "[EE] encounted error while reading {} font: {}",
-                        $kind,
-                        e.description()
-                    );
-                    eprintln!("[EE] ... which was caused by {:?}.", e.cause().unwrap());
+                    eprintln!("[EE] encounted error while reading {} font: {}", $kind, e);
+                    eprintln!("[EE] ... which was caused by {:?}.", e.source().unwrap());
                     process::exit(1);
                 }
             }
@@ -168,7 +163,7 @@ fn main() {
     );
     let mono_font_name = unwrap_font_name!(
         "monospace",
-        read_font_name(alias_dir.clone(), "monospace", &args[3])
+        read_font_name(alias_dir, "monospace", &args[3])
     );
 
     let xml = generate_xml(sans_font_name, serif_font_name, mono_font_name);
