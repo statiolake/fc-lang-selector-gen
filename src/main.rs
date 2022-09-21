@@ -1,5 +1,6 @@
 use std::env;
 use std::error::Error;
+use std::fs;
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -110,16 +111,17 @@ where
 }
 
 fn write_to_language_selector(xml: String) -> Result<(), Box<dyn Error>> {
-    let path: PathBuf = [
-        "/",
-        "etc",
-        "fonts",
-        "conf.d",
-        "69-language-selector-ja-jp.conf",
-    ]
-    .iter()
-    .collect();
-    // println!("writing at {}", path.display());
+    let path: PathBuf = if let Ok(config) = env::var("XDG_CONFIG_HOME") {
+        PathBuf::from(&config).join("fontconfig")
+    } else if let Ok(home) = env::var("HOME") {
+        PathBuf::from(&home).join(".config").join("fontconfig")
+    } else {
+        PathBuf::from("/etc/fonts")
+    }
+    .join("conf.d")
+    .join("69-language-selector-ja-jp.conf");
+    println!("config file: {}", path.display());
+    fs::create_dir_all(path.parent().unwrap())?;
 
     let f = File::create(path)?;
     let mut bw = BufWriter::new(f);
