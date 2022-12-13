@@ -110,8 +110,10 @@ where
     )
 }
 
-fn write_to_language_selector(xml: String) -> Result<(), Box<dyn Error>> {
-    let path: PathBuf = if let Ok(config) = env::var("XDG_CONFIG_HOME") {
+fn write_to_language_selector(is_system_wide: bool, xml: String) -> Result<(), Box<dyn Error>> {
+    let path: PathBuf = if is_system_wide {
+        PathBuf::from("/etc/fonts")
+    } else if let Ok(config) = env::var("XDG_CONFIG_HOME") {
         PathBuf::from(&config).join("fontconfig")
     } else if let Ok(home) = env::var("HOME") {
         PathBuf::from(&home).join(".config").join("fontconfig")
@@ -131,7 +133,10 @@ fn write_to_language_selector(xml: String) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() {
-    let args: Vec<_> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
+    let is_system_wide = args.contains(&"--sys".to_string());
+    args.retain(|arg| arg != "--sys");
+
     if args.len() != 4 {
         eprintln!(
             "[EE] The number of arguments is incollect: expected 4 but {} supplied.",
@@ -169,7 +174,7 @@ fn main() {
     );
 
     let xml = generate_xml(sans_font_name, serif_font_name, mono_font_name);
-    if let Err(e) = write_to_language_selector(xml) {
+    if let Err(e) = write_to_language_selector(is_system_wide, xml) {
         eprintln!("[EE] error while writing to language selector: {}", e);
     }
     println!("successfully set fonts.");
