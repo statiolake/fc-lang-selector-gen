@@ -18,21 +18,24 @@ fn get_alias_dir() -> PathBuf {
 #[derive(Debug)]
 struct ReadFontNameError {
     description: String,
-    pub path: PathBuf,
+    path: PathBuf,
     error: Box<dyn Error>,
 }
 
 impl std::fmt::Display for ReadFontNameError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.description)?;
+        write!(f, "error while reading {}", self.path.display())?;
         Ok(())
     }
 }
 
 impl ReadFontNameError {
-    pub fn new(path: PathBuf, error: Box<dyn Error>) -> ReadFontNameError {
+    pub fn new<S>(description: S, path: PathBuf, error: Box<dyn Error>) -> ReadFontNameError
+    where
+        S: Into<String>,
+    {
         ReadFontNameError {
-            description: format!("error while reading {}", path.display()),
+            description: description.into(),
             path,
             error,
         }
@@ -58,12 +61,14 @@ fn read_font_name(
     alias_dir.push(alias);
 
     // println!("[reading {}", alias_dir.display());
-    let f = File::open(&alias_dir)
-        .map_err(|e| ReadFontNameError::new(alias_dir.clone(), Box::new(e)))?;
+    let f = File::open(&alias_dir).map_err(|e| {
+        ReadFontNameError::new("failed to open file", alias_dir.clone(), Box::new(e))
+    })?;
     let mut br = BufReader::new(f);
     let mut contents = String::new();
-    br.read_to_string(&mut contents)
-        .map_err(|e| ReadFontNameError::new(alias_dir.clone(), Box::new(e)))?;
+    br.read_to_string(&mut contents).map_err(|e| {
+        ReadFontNameError::new("failed to read contents", alias_dir.clone(), Box::new(e))
+    })?;
 
     Ok(contents.trim().to_string())
 }
@@ -85,7 +90,7 @@ where
         <edit name="family" mode="prepend" binding="strong">
             <string>{}</string>
         </edit>
-    </match> 
+    </match>
     <match target="pattern">
         <test qual="any" name="family">
             <string>sans-serif</string>
@@ -93,7 +98,7 @@ where
         <edit name="family" mode="prepend" binding="strong">
             <string>{}</string>
         </edit>
-    </match> 
+    </match>
     <match target="pattern">
         <test qual="any" name="family">
             <string>monospace</string>
